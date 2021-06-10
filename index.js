@@ -25,20 +25,44 @@ document.getElementById('drag').addEventListener('drop',
     });
 
 function readFile(input) {
-    start_animate();
+    // start_animate();
     file = input.files[0];
     reader = new FileReader();
-    reader.readAsArrayBuffer(file);
+    document.getElementById('span').innerHTML = file.name + ' selected';
+    // reader.readAsArrayBuffer(file);
+    document.getElementById('check_btn').removeAttribute('disabled');
+    document.getElementById('base64_btn').removeAttribute('disabled');
 
-    reader.onloadend = function (e) {
-        document.getElementById('check_btn').removeAttribute('disabled');
-        document.getElementById('base64_btn').removeAttribute('disabled');
+    reader.onloadend = async function (e) {
+        // document.getElementById('check_btn').removeAttribute('disabled');
+        // document.getElementById('base64_btn').removeAttribute('disabled');
         buf = reader.result
-        uarr = new Uint8Array(buf);
+        // uarr = new Uint8Array(buf);
         // console.log(uarr);
         // console.log(atob(btoa(uarr)));
-        document.getElementById('span').innerHTML = file.name+' selected';
-        stop_animate();
+        // document.getElementById('span').innerHTML = file.name+' selected';
+        // stop_animate();
+        if (reader.result instanceof ArrayBuffer) {
+            const digestHex = await digestMessage();
+            let result = document.getElementById('result');
+            result.innerHTML = digestHex;
+            console.log(digestHex);
+            delete digestHex;
+            stop_animate();
+        }
+        else {
+            if (file.size < 400000) {
+                document.getElementById('base64_btn').setAttribute('disabled', 'disabled');
+                const base64str = btoa(buf);
+                console.log(base64str);
+                let result = document.getElementById('result');
+                result.innerHTML = `<textarea>${base64str}</textarea>`;
+            } else {
+                alert('file is too large for base64 encoding');
+            }
+            stop_animate();
+        }
+
     };
 
     reader.onerror = function () {
@@ -75,7 +99,7 @@ function readFile(input) {
 
 
 async function digestMessage() {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', uarr);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buf);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     return hashHex;
@@ -85,24 +109,14 @@ async function digestMessage() {
 // console.log(digestHex);
 
 const show_result = async () => {
+    start_animate();
     document.getElementById('check_btn').setAttribute('disabled', 'disabled');
-    const digestHex = await digestMessage();
-    let result = document.getElementById('result');
-    result.innerHTML = digestHex;
-
-    console.log(digestHex);
-    delete digestHex;
+    await reader.readAsArrayBuffer(file);
 }
 
 const show_encode = async () => {
-    if (file.size < 40000) {
-        document.getElementById('base64_btn').setAttribute('disabled', 'disabled');
-        const base64str = btoa(uarr);
-        let result = document.getElementById('result');
-        result.innerHTML = `<textarea>${base64str}</textarea>`;
-    }else{
-        alert('file is too large for base64 encoding');
-    }
+    start_animate();
+    reader.readAsBinaryString(file);
 }
 
 const start_animate = () => {
